@@ -1,6 +1,7 @@
 const express = require("express");
 const dotenv = require("dotenv");
 const https = require("https");
+const routerReservacion = require("./router/reservacion");
 
 dotenv.config();
 
@@ -15,6 +16,7 @@ http_server.use(( req, res, next ) => {
   next();
 });
 
+http_server.use('/reservacion', routerReservacion);
 
 /*const privateKey  = fs.readFileSync( '/etc/letsencrypt/live/xura.tsj.mx/privkey.pem', 'utf8');
 const ca = fs.readFileSync('/etc/letsencrypt/live/xura.tsj.mx/fullchain.pem', 'utf8');
