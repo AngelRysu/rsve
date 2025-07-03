@@ -1,5 +1,6 @@
 const db = require("../config/mysql");
 const {areIntervalsOverlapping, generarCodigoAlfanumericoAleatorio, obtenerSemanaActualDomingoASabado} = require("../helpers/tiempo");
+const Mailer = require("../helpers/Mail");
 
 const registrar_reservacion = async (req, res) => {
     const {idSala, nombre, correo, area, fecha, hora_inicio, hora_fin} = req.body;
@@ -10,12 +11,7 @@ const registrar_reservacion = async (req, res) => {
     fechaUsuario.setMinutes(51);
     fechaUsuario.setSeconds(0);
     fechaUsuario.setMilliseconds(0);
-
-
-
-    console.log(fechaActual);
-    console.log(fechaUsuario);
-
+    const mailer = new Mailer();
 
     try{
         const [reservaciones_previas] = await con.query("SELECT hora_inicio, hora_fin FROM reservacion WHERE idSala = ? AND fecha = ?", [idSala, fecha]);
@@ -29,7 +25,24 @@ const registrar_reservacion = async (req, res) => {
         const code = await generarCodigoUnico(8);
         const obj = [idSala, code, nombre, correo, area, fecha, hora_inicio, hora_fin];
         await con.query("INSERT INTO reservacion(idSala, codigo, vigencia, nombre, correo, area, fecha, hora_inicio, hora_fin) VALUES(?, ?, UNIX_TIMESTAMP() + 900, ?, ?, ?, ?, ?, ?)", obj);
-        
+       const [[{ tiempo }]] = await con.query("SELECT UNIX_TIMESTAMP() + 900 AS tiempo");
+        // Construir el enlace de confirmación
+        const baseUrl = process.env.APP_URL || 'http://localhost:3022';
+        const confirmLink = `${baseUrl}/reservacion/confirmar/${code}`;
+        const mensaje = 
+            `Hola ${nombre},
+
+            Gracias por tu reservación.
+
+            📅 Fecha: ${new Date(tiempo * 1000).toLocaleString()}
+
+            ✅ Para confirmar tu reservación, haz clic o copia este enlace en tu navegador:
+            ${confirmLink}
+
+            Gracias por confiar en nosotros.`;
+
+        await mailer.enviarCorreo(correo, 'Confirma tu reservación', mensaje);
+
         return res.status(200).json({ok: true, codigo: code});
     }catch(err){
         console.log(err);
@@ -81,7 +94,61 @@ const obtener_reservaciones = async (req, res) => {
     }
 }
 
+const confirmar_reservacion = async (req, res) => {
+    const con = await db.getConnection();
+    const { code } = req.params;
+    const mailer = new Mailer();
+
+    try {
+        const [reservaciones] = await con.query(
+            "SELECT * FROM reservacion WHERE vigencia >= UNIX_TIMESTAMP() AND codigo = ?;",
+            [code]
+        );
+
+        if (reservaciones.length === 0) {
+            return res.status(400).json({ ok: false, msg: 'Código inválido o expirado' });
+        }
+
+        const reserva = reservaciones[0];
+
+        if (reserva.status === 'confirmado') {
+            return res.status(400).json({ ok: false, msg: 'Reservación ya confirmada' });
+        }
+
+        await con.query("UPDATE reservacion SET status = 'confirmado' WHERE codigo = ?", [code]);
+
+        console.log('Reservación confirmada:', code);
+
+        // Contenido del correo en texto plano
+        const mensaje = 
+            `✅ Reservación confirmada
+
+            Hola ${reserva.nombre},
+
+            Tu reservación ha sido confirmada exitosamente.
+
+            📅 Fecha y hora: ${new Date(reserva.vigencia * 1000).toLocaleString()}
+
+
+            Gracias por confiar en nosotros.
+            `;
+        await mailer.enviarCorreo(reserva.correo, 'Confirmación de reservación', mensaje);
+        // Si quieres enviar HTML, tendrías que modificar tu clase para incluir `html: htmlMensaje`
+
+        return res.status(200).json({ ok: true, msg: 'Reservación confirmada exitosamente' });
+
+    } catch (err) {
+        console.log(err);
+        return res.status(500).json({ ok: false, msg: 'Algo salió mal' });
+    } finally {
+        con.release();
+    }
+};
+
+
+
 module.exports = {
     registrar_reservacion,
-    obtener_reservaciones
+    obtener_reservaciones,
+    confirmar_reservacion
 }
