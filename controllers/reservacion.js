@@ -4,6 +4,18 @@ const {areIntervalsOverlapping, generarCodigoAlfanumericoAleatorio, obtenerSeman
 const registrar_reservacion = async (req, res) => {
     const {idSala, nombre, correo, area, fecha, hora_inicio, hora_fin} = req.body;
     const con = await db.getConnection();
+    const fechaActual = new Date();
+    const fechaUsuario = new Date(fecha);
+    fechaUsuario.setHours(10);
+    fechaUsuario.setMinutes(51);
+    fechaUsuario.setSeconds(0);
+    fechaUsuario.setMilliseconds(0);
+
+
+
+    console.log(fechaActual);
+    console.log(fechaUsuario);
+
 
     try{
         const [reservaciones_previas] = await con.query("SELECT hora_inicio, hora_fin FROM reservacion WHERE idSala = ? AND fecha = ?", [idSala, fecha]);
@@ -16,7 +28,7 @@ const registrar_reservacion = async (req, res) => {
 
         const code = await generarCodigoUnico(8);
         const obj = [idSala, code, nombre, correo, area, fecha, hora_inicio, hora_fin];
-        await con.query("INSERT INTO reservacion(idSala, codigo, nombre, correo, area, fecha, hora_inicio, hora_fin) VALUES(?, ?, ?, ?, ?, ?, ?, ?)", obj);
+        //await con.query("INSERT INTO reservacion(idSala, codigo, vigencia, nombre, correo, area, fecha, hora_inicio, hora_fin) VALUES(?, ?, UNIX_TIMESTAMP() + 900, ?, ?, ?, ?, ?, ?)", obj);
         
         return res.status(200).json({ok: true, codigo: code});
     }catch(err){
@@ -60,8 +72,7 @@ const obtener_reservaciones = async (req, res) => {
 
     try{
         const [reservaciones] = await con.query("SELECT DATE_FORMAT(fecha, '%Y-%m-%d') AS fecha, hora_inicio, hora_fin, status from reservacion WHERE idSala = ? AND fecha BETWEEN ? AND ?", [sala, semana.inicio, semana.fin]);
-        console.log(reservaciones);
-        return res.status(200).json({ok: true});
+        return res.status(200).json(reservaciones);
     }catch(err){
         console.log(err);
         return res.status(500).json({ok: false, msg: 'Algo salió mal'});
