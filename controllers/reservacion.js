@@ -28,7 +28,7 @@ const registrar_reservacion = async (req, res) => {
 
         const code = await generarCodigoUnico(8);
         const obj = [idSala, code, nombre, correo, area, fecha, hora_inicio, hora_fin];
-        //await con.query("INSERT INTO reservacion(idSala, codigo, vigencia, nombre, correo, area, fecha, hora_inicio, hora_fin) VALUES(?, ?, UNIX_TIMESTAMP() + 900, ?, ?, ?, ?, ?, ?)", obj);
+        await con.query("INSERT INTO reservacion(idSala, codigo, vigencia, nombre, correo, area, fecha, hora_inicio, hora_fin) VALUES(?, ?, UNIX_TIMESTAMP() + 900, ?, ?, ?, ?, ?, ?)", obj);
         
         return res.status(200).json({ok: true, codigo: code});
     }catch(err){
