@@ -5,6 +5,6 @@ const routerReservacion = Router();
 
 routerReservacion.post('/', registrar_reservacion);
 routerReservacion.get('/:sala', obtener_reservaciones);
-routerReservacion.put('/confirmacion/:code', confirmar_reservacion);
+routerReservacion.get('/confirmar/:code', confirmar_reservacion);
 
 module.exports = routerReservacion;
