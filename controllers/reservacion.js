@@ -51,7 +51,7 @@ const registrar_reservacion = async (req, res) => {
 
         const code = await generarCodigoUnico(8);
         const obj = [idSala, code, nombre, correo, area, fecha, hora_inicio, hora_fin];
-        //await con.query("INSERT INTO reservacion(idSala, codigo, vigencia, nombre, correo, area, fecha, hora_inicio, hora_fin) VALUES(?, ?, UNIX_TIMESTAMP() + 900, ?, ?, ?, ?, ?, ?)", obj);
+        await con.query("INSERT INTO reservacion(idSala, codigo, vigencia, nombre, correo, area, fecha, hora_inicio, hora_fin) VALUES(?, ?, UNIX_TIMESTAMP() + 900, ?, ?, ?, ?, ?, ?)", obj);
         const [[{ tiempo }]] = await con.query("SELECT UNIX_TIMESTAMP() + 900 AS tiempo");
         // Construir el enlace de confirmación
         const baseUrl = process.env.APP_URL || 'http://localhost:3022';
@@ -68,7 +68,7 @@ const registrar_reservacion = async (req, res) => {
 
             Gracias por confiar en nosotros.`;
 
-        //await mailer.enviarCorreo(correo, 'Confirma tu reservación', mensaje);
+        await mailer.enviarCorreo(correo, 'Confirma tu reservación', mensaje);
 
         return res.status(200).json({ok: true, codigo: code});
     }catch(err){
@@ -112,6 +112,20 @@ const obtener_reservaciones = async (req, res) => {
 
     try{
         const [reservaciones] = await con.query("SELECT DATE_FORMAT(fecha, '%Y-%m-%d') AS fecha, hora_inicio, hora_fin, status from reservacion WHERE idSala = ? AND fecha BETWEEN ? AND ?", [sala, semana.inicio, semana.fin]);
+        return res.status(200).json(reservaciones);
+    }catch(err){
+        console.log(err);
+        return res.status(500).json({ok: false, msg: 'Algo salió mal'});
+    }finally{
+        con.release();
+    }
+}
+
+const obtener_reservaciones_dia = async (req, res) => {
+    const {dia, sala} = req.params;
+    const con = await db.getConnection();
+    try{
+        const [reservaciones] = await con.query("SELECT DATE_FORMAT(fecha, '%Y-%m-%d') AS fecha, hora_inicio, hora_fin, status from reservacion WHERE idSala = ? AND fecha = ? AND status IN ('reservado','confirmado')", [sala, dia]);
         return res.status(200).json(reservaciones);
     }catch(err){
         console.log(err);
@@ -177,5 +191,6 @@ const confirmar_reservacion = async (req, res) => {
 module.exports = {
     registrar_reservacion,
     obtener_reservaciones,
-    confirmar_reservacion
+    confirmar_reservacion,
+    obtener_reservaciones_dia
 }
