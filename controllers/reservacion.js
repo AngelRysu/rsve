@@ -6,15 +6,42 @@ const registrar_reservacion = async (req, res) => {
     const {idSala, nombre, correo, area, fecha, hora_inicio, hora_fin} = req.body;
     const con = await db.getConnection();
     const fechaActual = new Date();
-    const fechaUsuario = new Date(fecha);
-    fechaUsuario.setHours(10);
-    fechaUsuario.setMinutes(51);
-    fechaUsuario.setSeconds(0);
-    fechaUsuario.setMilliseconds(0);
+
+    console.log(fechaActual);
+    const fecha_arr = fecha.split("-");
+    const horas_minutos = hora_inicio.split(":");
+    const fechaUsuario = new Date(fecha_arr[0], fecha_arr[1] - 1, fecha_arr[2], horas_minutos[0], horas_minutos[1], 0, 0);
+
+    //validar que no sea sabado ni domingo
+    const dia = fechaUsuario.getDay();
+    if(dia === 6 || dia === 0){
+        return res.status(400).json({ok: false, "msg": "fecha y hora invalida: no se puede reservar en sabado ni domingo"});
+    }
+    
+    //validar que la fecha sea mayor a la fecha actual
+    if(fechaActual >= fechaUsuario){
+        return res.status(400).json({ok: false, "msg": "fecha y hora invalida: la fecha y hora es menor a la actual"}); 
+    }
+
+    //validar los 15 minutos de tolerancia 
+    fechaActual.setMinutes(fechaActual.getMinutes() + 15);
+    if(fechaActual >= fechaUsuario){
+        return res.status(400).json({ok: false, "msg": "fecha y hora invalida: Solo hay 15 minutos de tolerancia"});
+    }
+
+    //validar que la hora de fin sea mayor a la hora de inicio
+    const horas_minutos_fin = hora_fin.split(":");
+    const fechaUsuario_fin = new Date(fecha_arr[0], fecha_arr[1] - 1, fecha_arr[2], horas_minutos_fin[0], horas_minutos_fin[1], 0, 0);
+
+    if(fechaUsuario_fin <= fechaUsuario){
+        return res.status(400).json({ok: false, "msg": "fecha y hora invalida: la hora de finalización no puede ser menor a la hora de inicio"});
+    }
+
+
     const mailer = new Mailer();
 
     try{
-        const [reservaciones_previas] = await con.query("SELECT hora_inicio, hora_fin FROM reservacion WHERE idSala = ? AND fecha = ?", [idSala, fecha]);
+        const [reservaciones_previas] = await con.query("SELECT hora_inicio, hora_fin FROM reservacion WHERE idSala = ? AND fecha = ? AND status = 'confirmado'", [idSala, fecha]);
 
         for (const resv of reservaciones_previas){
             if(areIntervalsOverlapping(resv.hora_inicio, resv.hora_fin, hora_inicio, hora_fin)){
@@ -25,7 +52,7 @@ const registrar_reservacion = async (req, res) => {
         const code = await generarCodigoUnico(8);
         const obj = [idSala, code, nombre, correo, area, fecha, hora_inicio, hora_fin];
         await con.query("INSERT INTO reservacion(idSala, codigo, vigencia, nombre, correo, area, fecha, hora_inicio, hora_fin) VALUES(?, ?, UNIX_TIMESTAMP() + 900, ?, ?, ?, ?, ?, ?)", obj);
-       const [[{ tiempo }]] = await con.query("SELECT UNIX_TIMESTAMP() + 900 AS tiempo");
+        const [[{ tiempo }]] = await con.query("SELECT UNIX_TIMESTAMP() + 900 AS tiempo");
         // Construir el enlace de confirmación
         const baseUrl = process.env.APP_URL || 'http://localhost:3022';
         const confirmLink = `${baseUrl}/reservacion/confirmar/${code}`;
@@ -94,6 +121,20 @@ const obtener_reservaciones = async (req, res) => {
     }
 }
 
+const obtener_reservaciones_dia = async (req, res) => {
+    const {dia, sala} = req.params;
+    const con = await db.getConnection();
+    try{
+        const [reservaciones] = await con.query("SELECT DATE_FORMAT(fecha, '%Y-%m-%d') AS fecha, hora_inicio, hora_fin, status from reservacion WHERE idSala = ? AND fecha = ? AND status IN ('reservado','confirmado')", [sala, dia]);
+        return res.status(200).json(reservaciones);
+    }catch(err){
+        console.log(err);
+        return res.status(500).json({ok: false, msg: 'Algo salió mal'});
+    }finally{
+        con.release();
+    }
+}
+
 const confirmar_reservacion = async (req, res) => {
     const con = await db.getConnection();
     const { code } = req.params;
@@ -150,5 +191,6 @@ const confirmar_reservacion = async (req, res) => {
 module.exports = {
     registrar_reservacion,
     obtener_reservaciones,
-    confirmar_reservacion
+    confirmar_reservacion,
+    obtener_reservaciones_dia
 }
