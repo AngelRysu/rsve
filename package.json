@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest",
     "start": "node src/app.js",
     "dev": "nodemon src/app.js"
   },
@@ -14,11 +14,13 @@
   "dependencies": {
     "dotenv": "^17.0.1",
     "express": "^5.1.0",
+    "jest": "^30.0.4",
     "mysql2": "^3.14.1",
     "nodemailer": "^7.0.4"
   },
   "devDependencies": {
     "@types/nodemailer": "^6.4.17",
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.1.10",
+    "supertest": "^7.1.3"
   }
 }
