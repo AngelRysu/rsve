@@ -52,20 +52,19 @@ const registrar_reservacion = async (req, res) => {
         const code = await generarCodigoUnico(8);
         const obj = [idSala, code, nombre, correo, area, fecha, hora_inicio, hora_fin];
         await con.query("INSERT INTO reservacion(idSala, codigo, vigencia, nombre, correo, area, fecha, hora_inicio, hora_fin) VALUES(?, ?, UNIX_TIMESTAMP() + 900, ?, ?, ?, ?, ?, ?)", obj);
-        const [[{ tiempo }]] = await con.query("SELECT UNIX_TIMESTAMP() + 900 AS tiempo");
-        // Construir el enlace de confirmación
-        const baseUrl = process.env.APP_URL || 'http://localhost:3022';
-        const confirmLink = `${baseUrl}/reservacion/confirmar/${code}`;
+        const tiempo = Math.floor(Date.now() / 1000) + 900;
         const mensaje = 
             `Hola ${nombre},
 
             Gracias por tu reservación.
 
-            📅 Fecha: ${new Date(tiempo * 1000).toLocaleString()}
+            Tu reservación ha sido registrada exitosamente. Por favor, confirma tu reservación dentro de los próximos 15 minutos: ${new Date(tiempo * 1000).toLocaleString()}
 
-            ✅ Para confirmar tu reservación, haz clic o copia este enlace en tu navegador:
-            ${confirmLink}
+            📅 Fecha de la reunion: ${new Date(fecha).toLocaleString()}
 
+            ✅ Para confirmar tu reservación, ingresa el siguiente código en la aplicación:
+            Código: ${code}
+            
             Gracias por confiar en nosotros.`;
 
         await mailer.enviarCorreo(correo, 'Confirma tu reservación', mensaje);
