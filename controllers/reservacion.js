@@ -192,10 +192,34 @@ const confirmar_reservacion = async (req, res) => {
 };
 
 
+const validar_reservas = async (req, res) => {
+    const { correo } = req.body;
+    const con = await db.getConnection();
+    try
+    {
+        const [validacion_reservacion] = await con.query("SELECT * FROM reservacion WHERE correo = ? AND status = 'reservado' AND vigencia > UNIX_TIMESTAMP()", [correo]);
+        if(validacion_reservacion.length > 0)
+        {
+            return res.status(200).json({ok: true, data: validacion_reservacion});
+        }
+    }
+    catch(err)
+    {
+        console.log(err);
+        return res.status(500).json({ok: false, msg: 'Algo salió mal'});
+    }
+    finally
+    {
+        con.release();
+    }
+};
+
+
 
 module.exports = {
     registrar_reservacion,
     obtener_reservaciones,
     confirmar_reservacion,
-    obtener_reservaciones_dia
+    obtener_reservaciones_dia,
+    validar_reservas
 }
