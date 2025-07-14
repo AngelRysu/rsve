@@ -41,7 +41,13 @@ const registrar_reservacion = async (req, res) => {
     const mailer = new Mailer();
 
     try{
-        const [reservaciones_previas] = await con.query("SELECT hora_inicio, hora_fin FROM reservacion WHERE idSala = ? AND fecha = ? AND status = 'confirmado'", [idSala, fecha]);
+        //validacion que no puede reservar hasta que confirme sus reservaciones anteriores
+        const [validacion_reservacion] = await con.query("SELECT count(idReservacion) AS res FROM reservacion WHERE correo = ? AND status = 'reservado' AND vigencia > UNIX_TIMESTAMP()", [correo]);
+        if(validacion_reservacion[0].res > 0){
+            return res.status(400).json({ok: false, "msg": "Tiene reservaciones pendientes de confirmar"});
+        }
+
+        const [reservaciones_previas] = await con.query("SELECT hora_inicio, hora_fin FROM reservacion WHERE idSala = ? AND fecha = ?", [idSala, fecha]);
 
         for (const resv of reservaciones_previas){
             if(areIntervalsOverlapping(resv.hora_inicio, resv.hora_fin, hora_inicio, hora_fin)){
