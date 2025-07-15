@@ -2,6 +2,7 @@ const express = require("express");
 const dotenv = require("dotenv");
 const https = require("https");
 const routerSalas = require("./router/salas");
+const routerUsuarios = require("./router/users");
 const routerReservacion = require("./router/reservacion");
 
 dotenv.config();
@@ -19,6 +20,7 @@ app.use((req, res, next) => {
 
 app.use('/reservacion', routerReservacion);
 app.use('/salas', routerSalas);
+app.use('/usuarios', routerUsuarios);
 
 /*const privateKey  = fs.readFileSync( '/etc/letsencrypt/live/xura.tsj.mx/privkey.pem', 'utf8');
 const ca = fs.readFileSync('/etc/letsencrypt/live/xura.tsj.mx/fullchain.pem', 'utf8');

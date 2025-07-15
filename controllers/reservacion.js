@@ -236,6 +236,24 @@ const obtener_reservas = async (req, res) => {
         }
 };
 
+const cancelar_reservacion = async (req, res) => {
+    const con = await db.getConnection();
+    const { code } = req.params;
+    const mailer = new Mailer();
+
+    try {
+        await con.query("delete from reservacion WHERE codigo = ? and fecha > CURDATE()", [code]);
+
+        return res.status(200).json({ ok: true, msg: 'Reservación confirmada exitosamente' });
+
+    } catch (err) {
+        console.log(err);
+        return res.status(500).json({ ok: false, msg: 'Algo salió mal' });
+    } finally {
+        con.release();
+    }
+};
+
 
 
 module.exports = {
@@ -244,5 +262,6 @@ module.exports = {
     confirmar_reservacion,
     obtener_reservaciones_dia,
     validar_reservas,
-    obtener_reservas
+    obtener_reservas,
+    cancelar_reservacion
 }
