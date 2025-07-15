@@ -214,6 +214,28 @@ const validar_reservas = async (req, res) => {
     }
 };
 
+const obtener_reservas = async (req, res) => {
+    const { correo } = req.body;
+    const con = await db.getConnection();
+
+    try {
+        const [reservas] = await con.query("SELECT s.nombre as sala, r.idSala , r.fecha, r.hora_inicio, r.hora_fin FROM reservacion r join salas as s on r.idSala = s.idSala WHERE correo = ? AND status = 'confirmado' AND fecha BETWEEN CURDATE() AND CURDATE() + INTERVAL 7 DAY", [correo])
+        if (reservas.length > 0) {
+            return res.status(200).json({ ok: true, data: reservas });
+        } else {
+            return res.status(404).json({ ok: false, msg: 'No se encontraron reservaciones para esta semana' });
+        }
+    } catch(err)
+        {
+            console.log(err);
+            return res.status(500).json({ok: false, msg: 'Algo salió mal'});
+        }
+    finally
+        {
+            con.release();
+        }
+};
+
 
 
 module.exports = {
@@ -221,5 +243,6 @@ module.exports = {
     obtener_reservaciones,
     confirmar_reservacion,
     obtener_reservaciones_dia,
-    validar_reservas
+    validar_reservas,
+    obtener_reservas
 }
