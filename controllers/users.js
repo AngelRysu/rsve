@@ -115,6 +115,48 @@ const modificar_Usuario = async (req, res) => {
     }
 }
 
+const Logg = async (req, res) => {
+    const { mail, pass } = req.body;
+    const con = await db.getConnection();
+
+    try {
+        const [Usuarios] = await con.query(
+            "SELECT * FROM usuarios WHERE mail = ? AND status = 'Activo'",
+            [mail]
+        );
+
+        if (Usuarios.length === 0) {
+            return res.status(404).json({ ok: false, msg: "Usuario no encontrado o inactivo" });
+        }
+
+        const usuario = Usuarios[0];
+
+        const match = bycrypt.compareSync(pass, usuario.pass);
+        if (!match) {
+            return res.status(401).json({ ok: false, msg: "Contraseña incorrecta" });
+        }
+
+        const result = {
+            idUser: usuario.idUser,
+            mail: usuario.mail,
+            name: usuario.name,
+            area: usuario.area,
+            status: usuario.status,
+        };
+        if (usuario.type === 'admin') {
+            result.type = usuario.type;
+        }
+
+        return res.status(200).json(result);
+    } catch (err) {
+        console.log(err);
+        return res.status(500).json({ ok: false, msg: 'Algo salió mal' });
+    } finally {
+        con.release();
+    }
+};
+
+
 const eliminar_Usuario = async (req, res) => {
     const { idUser } = req.params;
     const con = await db.getConnection();
@@ -140,5 +182,6 @@ module.exports = {
     obtener_Usuarios,
     obtener_Usuario_One,
     modificar_Usuario,
-    eliminar_Usuario
+    eliminar_Usuario,
+    Logg
 }
