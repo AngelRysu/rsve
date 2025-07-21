@@ -1,14 +1,17 @@
 const db = require("../config/mysql");
 
+// En tu controlador/salas.js
 const registrar_Sala = async (req, res) => {
     const {nombre, descripcion} = req.body;
 
     const con = await db.getConnection();
     try{
-        const [Salas] = await con.query("SELECT * FROM salas");
-        if (nombre in Salas.map(sala => sala.nombre)) {
+        const [Salas] = await con.query("SELECT * FROM salas WHERE visible = 1"); 
+        
+        if (Salas.some(sala => sala.nombre === nombre)) {
             return res.status(400).json({ok: false, msg: "El nombre de la sala ya existe"});
         }
+        
         await con.query("INSERT INTO salas(nombre, descripcion) VALUES(?, ?);", [nombre, descripcion]);
 
         return res.status(201).json({ok: true, msg: "Sala creada exitosamente"});
@@ -26,7 +29,7 @@ const obtener_Salas = async (req, res) => {
         const [Salas] = await con.query("SELECT * FROM salas WHERE visible = 1");
 
         const final_Json = Salas.map(sala => ({
-            idSalas: sala.idSala,
+            idSala: sala.idSala,
             nombre: sala.nombre,
             descripcion: sala.descripcion,
         }));
@@ -53,7 +56,7 @@ const obtener_Sala_One = async (req, res) => {
         const Sala = Salas[0];
 
         const result = {
-            idSalas: Sala.idSala,
+            idSala: Sala.idSala,
             nombre: Sala.nombre, 
             descripcion: Sala.descripcion,
         };
@@ -86,7 +89,7 @@ const modificar_Sala = async (req, res) => {
         const Sala = updatedSalaRows[0];
 
         const result = {
-            idSalas: Sala.idSala,
+            idSala: Sala.idSala,
             nombre: Sala.nombre, 
             descripcion: Sala.descripcion,
         };
