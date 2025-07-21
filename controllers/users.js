@@ -51,7 +51,7 @@ const obtener_Usuario_One = async (req, res) => {
     try {
         const [Usuarios] = await con.query("SELECT * FROM usuarios WHERE idUser = ? AND status = 'Activo'", [idUser]);
         if (Usuarios.length === 0) {
-            return res.status(404).json({ ok: false, msg: "Sala no encontrada" });
+            return res.status(404).json({ ok: false, msg: "Usuario no encontrado" });
         }
 
         const usuario = Usuarios[0];
