@@ -12,4 +12,4 @@ routerReservacion.post('/reservas/', obtener_reservas);
 routerReservacion.post('/reservas/all', obtener_reservas_all);
 routerReservacion.delete('/cancelar/:code', cancelar_reservacion);
 
-module.exports = routerReservacion;
+module.exports = (app) => app.use("/reservacion",routerReservacion);

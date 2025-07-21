@@ -102,8 +102,8 @@ const existeCodigoEnDB = async (codigo) => {
         const [rows] = await con.execute('SELECT count(codigo) AS cod FROM reservacion WHERE codigo = ?', [codigo]);
         return rows[0].cod > 0; // Retorna true si el código existe, false si no
     } catch (error) {
-        console.log(err);
-        res.status(500).json({ok: false, msg: 'Algo salió mal'});
+        console.log("Error en existeCodigoEnDB:", error); // Log the error
+        throw error; // Re-lanzar el error para que el controlador lo capture
     } finally {
         con.release();
     }
@@ -184,8 +184,8 @@ const confirmar_reservacion = async (req, res) => {
         return res.status(200).json({ ok: true, msg: 'Reservación confirmada exitosamente' });
 
     } catch (err) {
-        console.log(err);
-        return res.status(500).json({ ok: false, msg: 'Algo salió mal' });
+        console.log("Error en confirmar_reservacion:", err); // Log más específico
+        return res.status(500).json({ok: false, msg: 'Algo salió mal'});
     } finally {
         con.release();
     }
@@ -201,6 +201,8 @@ const validar_reservas = async (req, res) => {
         if(validacion_reservacion.length > 0)
         {
             return res.status(200).json({ok: true, data: validacion_reservacion});
+        } else {
+            return res.status(200).json({ok: true, data: []});
         }
     }
     catch(err)
@@ -265,11 +267,11 @@ const cancelar_reservacion = async (req, res) => {
     try {
         await con.query("delete from reservacion WHERE codigo = ? and fecha > CURDATE()", [code]);
 
-        return res.status(200).json({ ok: true, msg: 'Reservación confirmada exitosamente' });
+        return res.status(200).json({ ok: true, msg: 'Reservación cancelada exitosamente' });
 
     } catch (err) {
         console.log(err);
-        return res.status(500).json({ ok: false, msg: 'Algo salió mal' });
+        return res.status(500).json({ok: false, msg: 'Algo salió mal'});
     } finally {
         con.release();
     }
