@@ -16,4 +16,4 @@ routerNoticias.put('/:idUser',modificar_Usuario );
 routerNoticias.delete('/:idUser', eliminar_Usuario);
 routerNoticias.post('/logg/',Logg );
 
-module.exports = routerNoticias;
+module.exports = (app) => app.use('/usuarios',routerNoticias);

@@ -18,6 +18,10 @@ app.use((req, res, next) => {
   next();
 });
 
+routerReservacion(app);
+routerSalas(app);
+routerUsuarios(app);
+
 app.use('/reservacion', routerReservacion);
 app.use('/salas', routerSalas);
 app.use('/usuarios', routerUsuarios);

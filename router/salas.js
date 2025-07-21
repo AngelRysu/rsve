@@ -9,4 +9,4 @@ routerNoticias.get('/:idSala', obtener_Sala_One);
 routerNoticias.put('/:idSala', modificar_Sala);
 routerNoticias.delete('/:idSala', eliminar_Sala);
 
-module.exports = routerNoticias;
+module.exports = (app) => app.use('/salas',routerNoticias);

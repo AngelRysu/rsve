@@ -8,8 +8,8 @@ const registrar_usuario = async (req, res) => {
 
     const con = await db.getConnection();
     try{
-        const [Usuarios] = await con.query("SELECT * FROM usuarios Where status = 'Activo'");
-        if (mail in Usuarios.map(usuario => usuario.nombre)) {
+        const [Usuarios] = await con.query("SELECT * FROM usuarios WHERE status = 'Activo'");
+        if (Usuarios.find(usuario => usuario.mail === mail)) {
             return res.status(400).json({ok: false, msg: "el usuario ya existe"});
         }
         await con.query("INSERT INTO usuarios(mail, pass, name, area) VALUES(?, ?, ?, ?);", [mail, password, name, area]);
