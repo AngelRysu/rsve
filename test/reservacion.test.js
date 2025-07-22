@@ -240,7 +240,7 @@ describe('Reservacion Routes', () => {
 
       // AAA - Assert
       expect(response.status).toBe(400);
-      expect(response.body).toEqual({ ok: false, msg: 'fecha y hora invalida: no se puede reservar en sabado ni domingo' });
+      expect(response.body).toEqual({ ok: false, msg: '<strong>Fecha y hora invalida:</strong> No se puede reservar en sabado ni domingo' });
     });
 
     it('debería rechazar reservas en fin de semana (domingo)', async () => {
@@ -254,7 +254,7 @@ describe('Reservacion Routes', () => {
 
       // AAA - Assert
       expect(response.status).toBe(400);
-      expect(response.body).toEqual({ ok: false, msg: 'fecha y hora invalida: no se puede reservar en sabado ni domingo' });
+      expect(response.body).toEqual({ ok: false, msg: '<strong>Fecha y hora invalida:</strong> No se puede reservar en sabado ni domingo' });
     });
 
     it('debería rechazar si la fecha y hora es menor a la actual', async () => {
@@ -269,7 +269,7 @@ describe('Reservacion Routes', () => {
 
       // AAA - Assert
       expect(response.status).toBe(400);
-      expect(response.body).toEqual({ ok: false, msg: 'fecha y hora invalida: la fecha y hora es menor a la actual' });
+      expect(response.body).toEqual({ ok: false, msg: '<strong>Fecha y hora invalida:</strong> La fecha y hora es menor a la actual' });
     });
 
     it('debería rechazar si no hay 15 minutos de tolerancia', async () => {
@@ -284,7 +284,7 @@ describe('Reservacion Routes', () => {
 
       // AAA - Assert
       expect(response.status).toBe(400);
-      expect(response.body).toEqual({ ok: false, msg: 'fecha y hora invalida: Solo hay 15 minutos de tolerancia' });
+      expect(response.body).toEqual({ ok: false, msg: '<strong>Fecha y hora invalida:</strong> Solo hay 15 minutos de tolerancia' });
     });
 
     it('debería rechazar si la hora de fin es menor o igual a la hora de inicio', async () => {
@@ -299,7 +299,7 @@ describe('Reservacion Routes', () => {
 
       // AAA - Assert
       expect(response.status).toBe(400);
-      expect(response.body).toEqual({ ok: false, msg: 'fecha y hora invalida: la hora de finalización no puede ser menor a la hora de inicio' });
+      expect(response.body).toEqual({ ok: false, msg: '<strong>Fecha y hora invalida:</strong> La hora de finalización no puede ser menor a la hora de inicio' });
     });
 
     it('debería rechazar si el usuario tiene reservaciones pendientes de confirmar', async () => {
