@@ -15,18 +15,18 @@ const registrar_reservacion = async (req, res) => {
     //validar que no sea sabado ni domingo
     const dia = fechaUsuario.getDay();
     if(dia === 6 || dia === 0){
-        return res.status(400).json({ok: false, "msg": "fecha y hora invalida: no se puede reservar en sabado ni domingo"});
+        return res.status(400).json({ok: false, "msg": "<strong>Fecha y hora invalida:</strong> No se puede reservar en sabado ni domingo"});
     }
     
     //validar que la fecha sea mayor a la fecha actual
     if(fechaActual >= fechaUsuario){
-        return res.status(400).json({ok: false, "msg": "fecha y hora invalida: la fecha y hora es menor a la actual"}); 
+        return res.status(400).json({ok: false, "msg": "<strong>Fecha y hora invalida:</strong> La fecha y hora es menor a la actual"}); 
     }
 
     //validar los 15 minutos de tolerancia 
     fechaActual.setMinutes(fechaActual.getMinutes() + 15);
     if(fechaActual >= fechaUsuario){
-        return res.status(400).json({ok: false, "msg": "fecha y hora invalida: Solo hay 15 minutos de tolerancia"});
+        return res.status(400).json({ok: false, "msg": "<strong>Fecha y hora invalida:</strong> Solo hay 15 minutos de tolerancia"});
     }
 
     //validar que la hora de fin sea mayor a la hora de inicio
@@ -34,7 +34,7 @@ const registrar_reservacion = async (req, res) => {
     const fechaUsuario_fin = new Date(fecha_arr[0], fecha_arr[1] - 1, fecha_arr[2], horas_minutos_fin[0], horas_minutos_fin[1], 0, 0);
 
     if(fechaUsuario_fin <= fechaUsuario){
-        return res.status(400).json({ok: false, "msg": "fecha y hora invalida: la hora de finalización no puede ser menor a la hora de inicio"});
+        return res.status(400).json({ok: false, "msg": "<strong>Fecha y hora invalida:</strong> La hora de finalización no puede ser menor a la hora de inicio"});
     }
 
 
