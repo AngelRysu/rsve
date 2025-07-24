@@ -3,7 +3,7 @@ const {areIntervalsOverlapping, generarCodigoAlfanumericoAleatorio, obtenerSeman
 const Mailer = require("../helpers/Mail");
 
 const registrar_reservacion = async (req, res) => {
-    const {idSala, nombre, correo, area, fecha, hora_inicio, hora_fin} = req.body;
+    const {idSala, nombre, correo, area, fecha, hora_inicio, hora_fin, descripcion} = req.body;
     const con = await db.getConnection();
     const fechaActual = new Date();
 
@@ -56,8 +56,8 @@ const registrar_reservacion = async (req, res) => {
         }
 
         const code = await generarCodigoUnico(8);
-        const obj = [idSala, code, nombre, correo, area, fecha, hora_inicio, hora_fin];
-        await con.query("INSERT INTO reservacion(idSala, codigo, vigencia, nombre, correo, area, fecha, hora_inicio, hora_fin) VALUES(?, ?, UNIX_TIMESTAMP() + 900, ?, ?, ?, ?, ?, ?)", obj);
+        const obj = [idSala, code, nombre, correo, area, fecha, hora_inicio, hora_fin, descripcion];
+        await con.query("INSERT INTO reservacion(idSala, codigo, vigencia, nombre, correo, area, fecha, hora_inicio, hora_fin, descripcion) VALUES(?, ?, UNIX_TIMESTAMP() + 900, ?, ?, ?, ?, ?, ?, ?)", obj);
         const tiempo = Math.floor(Date.now() / 1000) + 900;
         const mensaje = 
             `Hola ${nombre},
@@ -221,7 +221,7 @@ const obtener_reservas = async (req, res) => {
     const con = await db.getConnection();
 
     try {
-        const [reservas] = await con.query("SELECT s.nombre as sala, r.idSala , r.fecha, r.hora_inicio, r.hora_fin FROM reservacion r join salas as s on r.idSala = s.idSala WHERE correo = ? AND status = 'confirmado' AND fecha BETWEEN CURDATE() AND CURDATE() + INTERVAL 7 DAY", [correo])
+        const [reservas] = await con.query("SELECT s.nombre as sala, r.idSala , r.fecha, r.hora_inicio, r.hora_fin, r.descripcion, s.responsable, s.correoResponsable FROM reservacion r join salas as s on r.idSala = s.idSala WHERE correo = ? AND status = 'confirmado' AND fecha BETWEEN CURDATE() AND CURDATE() + INTERVAL 7 DAY", [correo])
         if (reservas.length > 0) {
             return res.status(200).json({ ok: true, data: reservas });
         } else {
@@ -242,7 +242,7 @@ const obtener_reservas_all = async (req, res) => {
     const con = await db.getConnection();
 
     try {
-        const [reservas] = await con.query("SELECT s.nombre as sala, r.idSala , r.fecha, r.hora_inicio, r.hora_fin, status FROM reservacion r join salas as s on r.idSala = s.idSala WHERE fecha BETWEEN CURDATE() AND CURDATE() + INTERVAL 7 DAY")
+        const [reservas] = await con.query("SELECT s.nombre as sala,  r.idSala,  r.fecha,  r.hora_inicio,  r.hora_fin,  r.descripcion, s.responsable, s.correoResponsable, status  FROM reservacion r join salas as s on r.idSala = s.idSala  WHERE fecha BETWEEN CURDATE() AND CURDATE() + INTERVAL 7 DAY")
         if (reservas.length > 0) {
             return res.status(200).json({ ok: true, data: reservas });
         } else {

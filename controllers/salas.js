@@ -27,10 +27,13 @@ const obtener_Salas = async (req, res) => {
     const con = await db.getConnection();
     try {
         const [Salas] = await con.query("SELECT * FROM salas WHERE visible = 1");
+        console.log(Salas);
 
         const final_Json = Salas.map(sala => ({
             idSala: sala.idSala,
             nombre: sala.nombre,
+            responsable: sala.responsable,
+            correoResponsable: sala.correoResponsable,
             descripcion: sala.descripcion,
         }));
 
