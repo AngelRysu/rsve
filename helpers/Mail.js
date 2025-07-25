@@ -19,7 +19,7 @@ class Mailer {
             from: process.env.MAIL_USER,
             to: destinatario,
             subject: asunto,
-            text: contenido
+            html: contenido
         };
 
         try {

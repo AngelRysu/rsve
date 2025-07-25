@@ -59,21 +59,44 @@ const registrar_reservacion = async (req, res) => {
         const obj = [idSala, code, nombre, correo, area, fecha, hora_inicio, hora_fin, descripcion];
         await con.query("INSERT INTO reservacion(idSala, codigo, vigencia, nombre, correo, area, fecha, hora_inicio, hora_fin, descripcion) VALUES(?, ?, UNIX_TIMESTAMP() + 900, ?, ?, ?, ?, ?, ?, ?)", obj);
         const tiempo = Math.floor(Date.now() / 1000) + 900;
+
+        const [[responsable_db]] = await con.query("SELECT nombre, responsable, correoResponsable FROM salas WHERE idSala = ?", [idSala]);
+
         const mensaje = 
-            `Hola ${nombre},
+            `<pre>Hola ${nombre},
 
-            Gracias por tu reservación.
-
-            Tu reservación ha sido registrada exitosamente. Por favor, confirma tu reservación dentro de los próximos 15 minutos: ${new Date(tiempo * 1000).toLocaleString()}
-
-            📅 Fecha de la reunion: ${new Date(fecha).toLocaleString()}
-
-            ✅ Para confirmar tu reservación, ingresa el siguiente código en la aplicación:
-            Código: ${code}
+Gracias por tu reservación.
             
-            Gracias por confiar en nosotros.`;
+Tu reservación ha sido registrada exitosamente. Por favor, confirma tu reservación dentro de los próximos 15 minutos
+
+📅 Descripćión de la reunion: 
+    <b>Fecha:</b> ${fecha}
+    <b>Sala:</b> ${responsable_db.nombre}
+    <b>Motivo:</b> ${descripcion}
+    <b>Hora de inicio:</b> ${hora_inicio}
+    <b>Hora de fin:</b> ${hora_fin}
+
+✅ Para confirmar tu reservación, ingresa el siguiente código en la aplicación:
+Código: <h2>${code}</h2>`;
+
+        const mensaje_responsable =
+        `<pre>Hola ${responsable_db.responsable}, 
+        
+${nombre} ha reservado la sala: ${responsable_db.nombre}
+
+📅 Descripćión de la reunion:
+    <b>Fecha:</b> ${fecha}
+    <b>Motivo:</b> ${descripcion}
+    <b>Hora de inicio:</b> ${hora_inicio}
+    <b>Hora de fin:</b> ${hora_fin}
+
+✅ Tiene 15 minutos para confirmar la reserva, cuando se confirme igualmente se notificará`;
+
+        console.log(mensaje);
+        console.log(mensaje_responsable);
 
         await mailer.enviarCorreo(correo, 'Confirma tu reservación', mensaje);
+        await mailer.enviarCorreo(responsable_db.correoResponsable, 'se reservó sala', mensaje_responsable);
 
         return res.status(200).json({ok: true, codigo: code});
     }catch(err){
@@ -161,25 +184,47 @@ const confirmar_reservacion = async (req, res) => {
             return res.status(400).json({ ok: false, msg: 'Reservación ya confirmada' });
         }
 
+        const [[sala]] = await con.query("SELECT * FROM salas WHERE idSala = ?", [reserva.idSala]);
+        console.log(sala);
+
         await con.query("UPDATE reservacion SET status = 'confirmado' WHERE codigo = ?", [code]);
 
         console.log('Reservación confirmada:', code);
 
         // Contenido del correo en texto plano
         const mensaje = 
-            `✅ Reservación confirmada
+            `<pre>✅ Reservación confirmada
 
-            Hola ${reserva.nombre},
+Hola ${reserva.nombre},
 
-            Tu reservación ha sido confirmada exitosamente.
+Tu reservación ha sido confirmada exitosamente.
 
-            📅 Fecha y hora: ${new Date(reserva.vigencia * 1000).toLocaleString()}
+📅 Descripćión de la reunion: 
+    <b>Fecha:</b> ${reserva.fecha}
+    <b>Sala:</b> ${sala.nombre}
+    <b>Motivo:</b> ${reserva.descripcion}
+    <b>Hora de inicio:</b> ${reserva.hora_inicio}
+    <b>Hora de fin:</b> ${reserva.hora_fin}
 
-
-            Gracias por confiar en nosotros.
+Gracias por confiar en nosotros.
             `;
+const mensaje_responsable = 
+            `<pre>✅ Reservación confirmada
+
+Hola ${sala.responsable},
+
+${reserva.nombre} ha confirmado su reserva.
+
+📅 Descripćión de la reunion: 
+    <b>Fecha:</b> ${reserva.fecha}
+    <b>Sala:</b> ${sala.nombre}
+    <b>Motivo:</b> ${reserva.descripcion}
+    <b>Hora de inicio:</b> ${reserva.hora_inicio}
+    <b>Hora de fin:</b> ${reserva.hora_fin}`;
         await mailer.enviarCorreo(reserva.correo, 'Confirmación de reservación', mensaje);
+        await mailer.enviarCorreo(reserva.correo, 'Confirmación de reserva', mensaje_responsable);
         // Si quieres enviar HTML, tendrías que modificar tu clase para incluir `html: htmlMensaje`
+        console.log(mensaje);
 
         return res.status(200).json({ ok: true, msg: 'Reservación confirmada exitosamente' });
 
