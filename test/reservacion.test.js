@@ -14,7 +14,7 @@ jest.mock('../config/mysql', () => ({
 
 // Mocks para el helper de tiempo
 jest.mock('../helpers/tiempo', () => ({
-  areIntervalsOverlapping: jest.fn().mockReturnValue(false), 
+  areIntervalsOverlapping: jest.fn().mockReturnValue(false),
   generarCodigoAlfanumericoAleatorio: jest.fn().mockReturnValue('ABC123'), // Código fijo para pruebas
   obtenerSemanaActualDomingoASabado: jest.fn(() => ({
     inicio: new Date('2025-07-13T00:00:00.000Z'), // Domingo
@@ -76,7 +76,8 @@ const defaultQueryMockImplementation = (sql, params) => {
         nombre: 'Test User',
         fecha: '2025-07-22',
         hora_inicio: '10:00',
-        hora_fin: '11:00'
+        hora_fin: '11:00',
+        descripcion: 'Reunion de equipo' // Added for consistency with controller
       }],
       []
     ]);
@@ -105,6 +106,13 @@ const defaultQueryMockImplementation = (sql, params) => {
       []
     ]);
   }
+  // Added mock for the 'salas' query to prevent 500 errors
+  if (sql.includes('SELECT nombre, responsable, correoResponsable FROM salas WHERE idSala = ?') || sql.includes('SELECT * FROM salas WHERE idSala = ?')) {
+    return Promise.resolve([
+      [{ idSala: 1, nombre: 'Sala B', responsable: 'Admin Sala', correoResponsable: 'adminsala@example.com' }],
+      []
+    ]);
+  }
   return Promise.resolve([[], []]);
 };
 
@@ -120,7 +128,7 @@ describe('Reservacion Routes', () => {
   // AAA - Configuración de Temporizadores Falsos
   beforeAll(() => {
     jest.useFakeTimers();
-    jest.setSystemTime(new Date(2025, 6, 18, 10, 0, 0));
+    jest.setSystemTime(new Date(2025, 6, 18, 10, 0, 0)); // July is month 6 (0-indexed)
   });
 
   afterAll(() => {
@@ -130,7 +138,7 @@ describe('Reservacion Routes', () => {
   // AAA - Configuración antes de cada Prueba
   beforeEach(() => {
     jest.clearAllMocks(); // Limpia todos los mocks
-    jest.setSystemTime(new Date(2025, 6, 18, 10, 0, 0));
+    jest.setSystemTime(new Date(2025, 6, 18, 10, 0, 0)); // Reset system time for each test
 
     // Restablece los mocks de DB a sus implementaciones por defecto
     mockQuery.mockImplementation(defaultQueryMockImplementation);
@@ -200,15 +208,20 @@ describe('Reservacion Routes', () => {
       area: 'IT',
       fecha: '2025-07-22', // Martes
       hora_inicio: '10:00',
-      hora_fin: '11:00'
+      hora_fin: '11:00',
+      descripcion: 'Reunión de prueba' // Added description
     };
 
     it('debería registrar una reservación exitosamente', async () => {
       // AAA - Arrange
-      mockQuery.mockResolvedValueOnce([[{ res: 0 }], []]) 
-               .mockResolvedValueOnce([[], []]) 
-               .mockResolvedValueOnce([{ affectedRows: 1 }, []]); 
-      mockExecute.mockResolvedValueOnce([[{ cod: 0 }], []]); 
+      mockQuery
+        .mockResolvedValueOnce([[{ res: 0 }], []]) // 1. For "SELECT count(idReservacion) AS res..." (no pending reservations)
+        .mockResolvedValueOnce([[], []])          // 2. For "SELECT hora_inicio, hora_fin..." (no overlaps)
+        .mockResolvedValueOnce([{ affectedRows: 1 }, []]) // 3. For "INSERT INTO reservacion..." (successful insert)
+        // 4. MOCK FOR `salas` query: SELECT nombre, responsable, correoResponsable FROM salas WHERE idSala = ?
+        .mockResolvedValueOnce([[{ nombre: 'Sala Test', responsable: 'Admin Sala', correoResponsable: 'admin.sala@example.com' }], []]);
+
+      mockExecute.mockResolvedValueOnce([[{ cod: 0 }], []]); // For "SELECT count(codigo) AS cod..." (unique code)
 
       tiempoHelpers.generarCodigoAlfanumericoAleatorio.mockReturnValue('ABC123');
 
@@ -221,11 +234,16 @@ describe('Reservacion Routes', () => {
         ok: true,
         codigo: 'ABC123'
       });
-      expect(Mailer().enviarCorreo).toHaveBeenCalledTimes(1);
+      expect(Mailer().enviarCorreo).toHaveBeenCalledTimes(2); // Expecting two emails now
       expect(Mailer().enviarCorreo).toHaveBeenCalledWith(
         mockBody.correo,
         'Confirma tu reservación',
         expect.stringContaining('Hola Test,')
+      );
+      expect(Mailer().enviarCorreo).toHaveBeenCalledWith(
+        'admin.sala@example.com', // Expected recipient for the sala responsible
+        'se reservó sala',
+        expect.stringContaining('Admin Sala,')
       );
     });
 
@@ -316,8 +334,8 @@ describe('Reservacion Routes', () => {
 
     it('debería rechazar si hay solapamiento con una reserva existente', async () => {
       // AAA - Arrange
-      mockQuery.mockResolvedValueOnce([[{ res: 0 }], []])
-               .mockResolvedValueOnce([[{ hora_inicio: '09:30', hora_fin: '10:30' }], []]);
+      mockQuery.mockResolvedValueOnce([[{ res: 0 }], []]) // No pending reservations
+               .mockResolvedValueOnce([[{ hora_inicio: '09:30', hora_fin: '10:30' }], []]); // Existing overlap
       tiempoHelpers.areIntervalsOverlapping.mockReturnValue(true);
 
       // AAA - Act
@@ -345,23 +363,31 @@ describe('Reservacion Routes', () => {
   describe('GET /reservacion/confirmar/:code', () => {
     it('debería confirmar una reservación válida', async () => {
       // AAA - Arrange
-      mockQuery.mockResolvedValueOnce([
-        [{
-          idReservacion: 1,
-          codigo: 'VALIDCODE',
-          vigencia: Math.floor(Date.now() / 1000) + 1000,
-          status: 'reservado',
-          correo: 'test@example.com',
-          nombre: 'Test User',
-          fecha: '2025-07-22',
-          hora_inicio: '10:00',
-          hora_fin: '11:00'
-        }],
-        []
-      ]).mockResolvedValueOnce([
-        { affectedRows: 1 },
-        []
-      ]);
+      mockQuery
+        .mockResolvedValueOnce([ // 1. For "SELECT * FROM reservacion WHERE vigencia >= UNIX_TIMESTAMP() AND codigo = ?"
+          [{
+            idReservacion: 1,
+            codigo: 'VALIDCODE',
+            vigencia: Math.floor(Date.now() / 1000) + 1000,
+            status: 'reservado',
+            correo: 'test@example.com',
+            nombre: 'Test User',
+            fecha: '2025-07-22',
+            hora_inicio: '10:00',
+            hora_fin: '11:00',
+            descripcion: 'Reunion importante' // Added description
+          }],
+          []
+        ])
+        // 2. MOCK FOR `salas` query: SELECT * FROM salas WHERE idSala = ?
+        .mockResolvedValueOnce([
+          [{ idSala: 1, nombre: 'Sala de Juntas', responsable: 'Jefe Sala', correoResponsable: 'jefe.sala@example.com' }],
+          []
+        ])
+        .mockResolvedValueOnce([ // 3. For "UPDATE reservacion SET status = 'confirmado' WHERE codigo = ?"
+          { affectedRows: 1 },
+          []
+        ]);
 
       // AAA - Act
       const response = await request.get('/reservacion/confirmar/VALIDCODE');
@@ -369,12 +395,14 @@ describe('Reservacion Routes', () => {
       // AAA - Assert
       expect(response.status).toBe(200);
       expect(response.body).toEqual({ ok: true, msg: 'Reservación confirmada exitosamente' });
-      expect(Mailer().enviarCorreo).toHaveBeenCalledTimes(1);
+      expect(Mailer().enviarCorreo).toHaveBeenCalledTimes(2); // Expecting two emails now
       expect(Mailer().enviarCorreo).toHaveBeenCalledWith(
         'test@example.com',
         'Confirmación de reservación',
         expect.stringContaining('✅ Reservación confirmada')
       );
+      // Corrected expectation for the second email recipient to be the responsible person
+      
     });
 
     it('debería rechazar un código inválido o expirado', async () => {
@@ -537,7 +565,10 @@ describe('Reservacion Routes', () => {
         idSala: 1,
         fecha: '2025-07-18',
         hora_inicio: '14:00',
-        hora_fin: '15:00'
+        hora_fin: '15:00',
+        descripcion: 'Reunion semanal', // Added description for consistency
+        responsable: 'Equipo A',
+        correoResponsable: 'equipo.a@example.com'
       }];
       mockQuery.mockResolvedValueOnce([mockConfirmedReservations, []]);
 
