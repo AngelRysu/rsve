@@ -548,7 +548,7 @@ describe('Reservacion Routes', () => {
       expect(response.status).toBe(200);
       expect(response.body).toEqual({ ok: true, data: mockConfirmedReservations });
       expect(mockQuery).toHaveBeenCalledWith(
-        "SELECT s.nombre as sala, r.idSala , r.fecha, r.hora_inicio, r.hora_fin FROM reservacion r join salas as s on r.idSala = s.idSala WHERE correo = ? AND status = 'confirmado' AND fecha BETWEEN CURDATE() AND CURDATE() + INTERVAL 7 DAY",
+        "SELECT s.nombre as sala, r.idSala , r.fecha, r.hora_inicio, r.hora_fin, r.descripcion, s.responsable, s.correoResponsable FROM reservacion r join salas as s on r.idSala = s.idSala WHERE correo = ? AND status = 'confirmado' AND fecha BETWEEN CURDATE() AND CURDATE() + INTERVAL 7 DAY",
         [mockCorreo]
       );
     });
